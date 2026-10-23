@@ -137,6 +137,12 @@ documentation were written by the agents; every patch of our own carries
 `Assisted-by: Claude`. The hardware statements under Status were measured on
 the boards.
 
+Earlier versions of this repository described other projects' code, including
+Radxa's and Allwinner's, in a tone that was not fair to the people who wrote
+it. Those texts were written with AI agents and published without the review
+they needed. They have been rewritten, and we apologise to everyone they
+concerned. Their work is what made this project possible.
+
 ## License
 
 "As upstream", in [REUSE](https://reuse.software) style: every part has the
