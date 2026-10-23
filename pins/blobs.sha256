@@ -1,0 +1,10 @@
+# sha256 of every prebuilt file the boot chain takes from radxa-pkg/u-boot-dlan17
+# (paths relative to the cloned package tree; commit pinned in scripts/build.sh).
+# scripts/build.sh checks them after the clone and again before the build and stops
+# on any difference. Measured from the pinned commit b1cec0a9.
+#   awbin/a733/ddr.bin   the vendor DRAM init (AArch32), built into the SPL
+#                        unchanged (SUNXI_LIBDRAM); the SPL copies it to SRAM
+#                        0x90000 and calls it
+# awbin/a733/bl31.bin is NOT listed: the chain does not use it (the source
+# BL31). Nothing else prebuilt is used: no SCP, no packer.
+d89804f404f2eef6ef5b03d82a310ef0906c4db8ded760be221b131f5c813a05  awbin/a733/ddr.bin

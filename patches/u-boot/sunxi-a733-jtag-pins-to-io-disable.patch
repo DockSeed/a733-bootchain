@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000015 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Thu, 15 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: a733: put PB0-PB3 back to IO disable in the SPL
+
+The vendor boot0 left PB0-PB3 on function 7, JTAG:
+PB_CFG0 read 0xffff7777 at the U-Boot prompt. Nothing later uses JTAG
+there, and on the Cubie A7S these are header pins (J11 7, 11, 29 and J6
+1). The SPL sets them to their reset value, IO disable (0xf), next to the
+console pins it already configures, whatever the stage before it left.
+
+Assisted-by: Claude
+---
+diff --git a/arch/arm/mach-sunxi/board.c b/arch/arm/mach-sunxi/board.c
+index 2a1d719ef58..8544878bb7a 100644
+--- a/arch/arm/mach-sunxi/board.c
++++ b/arch/arm/mach-sunxi/board.c
+@@ -81,6 +81,7 @@ phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
+ static int gpio_init(void)
+ {
+ 	__maybe_unused uint val;
++	__maybe_unused int pin;
+ #if CONFIG_CONS_INDEX == 1 && defined(CONFIG_UART0_PORT_F)
+ #if defined(CONFIG_MACH_SUN4I) || \
+     defined(CONFIG_MACH_SUN7I) || \
+@@ -195,6 +196,12 @@ static int gpio_init(void)
+ #error Unsupported console port number. Please fix pin mux settings in board.c
+ #endif
+ 
++#ifdef CONFIG_MACH_SUN60I_A733
++	/* boot0 leaves PB0-PB3 on JTAG; return them to IO disable */
++	for (pin = SUNXI_GPB(0); pin <= SUNXI_GPB(3); pin++)
++		sunxi_gpio_set_cfgpin(pin, SUNXI_GPIO_DISABLE);
++#endif
++
+ 	/*
+ 	 * Update PIO power bias configuration by copying the hardware
+ 	 * detected value.

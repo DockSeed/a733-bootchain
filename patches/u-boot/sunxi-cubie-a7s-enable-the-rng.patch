@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000013 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Tue, 13 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: enable the crypto engine RNG
+
+With an RNG, U-Boot offers EFI_RNG_PROTOCOL, and Linux's arm64 EFI stub
+takes its KASLR seed from it; without one Linux reports "KASLR disabled due
+to lack of seed". The rng command is there to check the source.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index 6458be406fd..a1459d38e4f 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -68,3 +68,6 @@ CONFIG_SYS_BOOTCOUNT_SINGLEWORD=y
+ CONFIG_BOOTCOUNT_ALTBOOTCMD="setenv boot_targets mmc_auto; setenv boot_syslinux_conf extlinux/extlinux-fallback.conf; run distro_bootcmd; env default -f boot_targets boot_syslinux_conf; run distro_bootcmd"
+ CONFIG_CMD_BOOTCOUNT=y
+ CONFIG_SYSRESET_PSCI=y
++CONFIG_DM_RNG=y
++CONFIG_RNG_SUN60I_CE=y
++CONFIG_CMD_RNG=y

@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000014 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Tue, 13 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: a733: build without warnings
+
+Three warnings of the build, none of them a wrong value:
+- pcie-sunxi-plat: cfg0_base is a u32 address that the cast to a pointer
+  zero-extends; the cast goes through uintptr_t now.
+- sunxi_gpadc: the address of a channel's data register was an int
+  expression; it is computed as ulong now.
+- radxa-cubie-a7s_defconfig: remove the duplicate REGULATOR_AXP entry.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index a1459d38e4f..8d089424099 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -51,7 +51,6 @@ CONFIG_PCI=y
+ CONFIG_NVME_PCI=y
+ CONFIG_PCIE_SUNXI=y
+ CONFIG_AW_CADENCE_COMBOPHY=y
+-CONFIG_REGULATOR_AXP=y
+ CONFIG_CMD_PCI=y
+ CONFIG_SPI=y
+ # CONFIG_SPI_FLASH is not set
+diff --git a/drivers/adc/sunxi_gpadc.c b/drivers/adc/sunxi_gpadc.c
+index 08694bce913..7466ac77ae2 100644
+--- a/drivers/adc/sunxi_gpadc.c
++++ b/drivers/adc/sunxi_gpadc.c
+@@ -83,7 +83,7 @@ int sunxi_gpadc_read(int channel)
+ 
+ 	/* if there is already data pending, read it */
+ 	if (ints & (GPADC0_DATA_PENDING << channel)) {
+-		snum = readl(GP_CH0_DATA + (channel * 4));
++		snum = readl((ulong)GP_CH0_DATA + channel * 4);
+ 	}
+ 
+ 	key = snum;
+diff --git a/drivers/pci/pcie-sunxi-plat.c b/drivers/pci/pcie-sunxi-plat.c
+index 266d67b8442..52c049375e2 100644
+--- a/drivers/pci/pcie-sunxi-plat.c
++++ b/drivers/pci/pcie-sunxi-plat.c
+@@ -458,7 +458,7 @@ void sunxi_pcie_plat_init(struct udevice *dev)
+ 	pci->pcie_port.io_size = SUNXI_PCIE_IO_SIZE;
+ 	pci->pcie_port.mem_base = SUNXI_PCIE_MEM_ADDR;
+ 	pci->pcie_port.mem_size = SUNXI_PCIE_MEM_SIZE;
+-	pci->pcie_port.va_cfg0_base = (void *)pci->pcie_port.cfg0_base;
++	pci->pcie_port.va_cfg0_base = (void *)(uintptr_t)pci->pcie_port.cfg0_base;
+ 	pci->pcie_port.cpu_pcie_addr_quirk = pci->drvdata->cpu_pcie_addr_quirk;
+ 	if (pci->pcie_port.cpu_pcie_addr_quirk) {
+ 		pci->pcie_port.cfg0_base -= PCIE_CPU_BASE;

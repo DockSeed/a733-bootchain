@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000011 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Tue, 13 Oct 2026 00:00:00 +0000
+Subject: [PATCH] arm: dts: sun60i: a733: add the crypto engine
+
+The non-secure interface of the crypto engine at 0x04603000, with the
+clocks and resets Linux's device tree gives it. The TRNG clock is the RC
+oscillator of the RTC.
+
+Assisted-by: Claude
+---
+diff --git a/arch/arm/dts/sun60i-a733.dtsi b/arch/arm/dts/sun60i-a733.dtsi
+index ee099450047..188f42acb1b 100644
+--- a/arch/arm/dts/sun60i-a733.dtsi
++++ b/arch/arm/dts/sun60i-a733.dtsi
+@@ -582,6 +582,17 @@
+ 			status = "disabled";
+ 		};
+ 
++		crypto: crypto@4603000 {
++			compatible = "allwinner,sun60i-a733-crypto";
++			reg = <0x04603000 0x800>;
++			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_CE>, <&ccu CLK_CE>,
++				 <&ccu CLK_MBUS_CE>, <&rtc CLK_IOSC>,
++				 <&ccu CLK_BUS_CE_SYS>;
++			clock-names = "bus", "mod", "ram", "trng", "sys";
++			resets = <&ccu RST_BUS_CE>, <&ccu RST_BUS_SYS_CE>;
++		};
++
+ 		nmi_intc: interrupt-controller@7010320 {
+ 			compatible = "allwinner,sun55i-a523-nmi";
+ 			reg = <0x07010320 0xc>;

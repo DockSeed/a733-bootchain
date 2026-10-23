@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000016 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Thu, 15 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: do not start the ARISC
+
+CMD_SUNXI_BOOT_ARISC defaults to y on the A733, and pxe_utils runs it
+before each extlinux boot (3af827d845). It copies the trained DRAM
+parameters out of the DRAM blob in SRAM into the kernel's device tree
+(603e7ff4b9) and asks BL31 to start the E902 with SMC 0x8000ff10
+(1210558a46, 238d06aac9). This chain loads no SCP image, and its BL31,
+built from TF-A source, answers that call with SMC_UNK. Turn the command
+off, so the kernel gets its device tree unchanged and no call is made.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index 8d089424099..fe4cbaa300f 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -70,3 +70,4 @@ CONFIG_SYSRESET_PSCI=y
+ CONFIG_DM_RNG=y
+ CONFIG_RNG_SUN60I_CE=y
+ CONFIG_CMD_RNG=y
++# CONFIG_CMD_SUNXI_BOOT_ARISC is not set

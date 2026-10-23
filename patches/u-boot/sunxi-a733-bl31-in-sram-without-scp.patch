@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000001 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Thu, 15 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: a733: BL31 in SRAM at 0x62000, no SCP
+
+489a44f885 moves BL31 to DRAM at 0x48000000 and adds an SCP image at
+0x48100000, for a prebuilt BL31 of 115 677 B that does not fit the SRAM
+slot. A BL31 built from TF-A source does: it links at 0x62000, with
+BL31_LIMIT 0x70000. Nothing on this chain starts the E902, so the FIT
+carries no SCP image. Both defaults go back to what they were before that
+commit.
+
+The SPL runs from SRAM at 0x47060 and carries the DRAM blob, which the
+boot hook copies to SUNXI_LIBDRAM_BASE (0x90000) before anything else
+runs. With SPL_MAX_SIZE 0x49000 and a blob of 232 409 B, the blob's copy
+inside the SPL image covers 0x57487-0x7fc39 wherever the linker puts it,
+so loading BL31 into 0x62000-0x70000 overwrites no part of the SPL that
+is still in use.
+
+Assisted-by: Claude
+Link: https://github.com/radxa/u-boot/commit/489a44f885e3eecb8e96dac8eb8f6f6f0231c4ed
+---
+diff --git a/arch/arm/mach-sunxi/Kconfig b/arch/arm/mach-sunxi/Kconfig
+index d090c1fac29..c6c0edaa6bb 100644
+--- a/arch/arm/mach-sunxi/Kconfig
++++ b/arch/arm/mach-sunxi/Kconfig
+@@ -265,7 +265,7 @@ config SUNXI_BL31_BASE
+ 	default 0x40000000 if MACH_SUN50I_H616
+ 	default 0x00104000 if SUN50I_GEN_H6
+ 	default 0x00054000 if MACH_SUN55I_A523
+-	default 0x48000000 if MACH_SUN60I_A733
++	default 0x00062000 if MACH_SUN60I_A733
+ 	default 0x0
+ 	help
+ 	  Address where BL31 (TF-A) is loaded, or zero if BL31 is not used.
+@@ -274,7 +274,6 @@ config SUNXI_SCP_BASE
+ 	hex
+ 	default 0x00050000 if MACH_SUN50I || MACH_SUN50I_H5
+ 	default 0x00114000 if MACH_SUN50I_H6
+-	default 0x48100000 if MACH_SUN60I_A733
+ 	default 0x0
+ 	help
+ 	  Address where SCP firmware is loaded, or zero if it is not used.

@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000009 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Tue, 13 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: name the board as Linux does
+
+U-Boot's device tree calls the board "Radxa A7S". The board is the Radxa
+Cubie A7S, and that is the model in Linux's device tree. With EFI the
+SMBIOS tables take the system and baseboard product from this model, so
+the OS reported "radxa Radxa A7S" while its own device tree said "Radxa
+Cubie A7S"; the banner and BL31 print it too. Nothing matches on it.
+
+The manufacturer stays the compatible's vendor prefix, "radxa", as U-Boot
+derives it for every board without an SMBIOS node.
+
+Assisted-by: Claude
+---
+diff --git a/arch/arm/dts/sun60i-a733-cubie-a7s.dts b/arch/arm/dts/sun60i-a733-cubie-a7s.dts
+index 30eec55d011..2f505f1df40 100644
+--- a/arch/arm/dts/sun60i-a733-cubie-a7s.dts
++++ b/arch/arm/dts/sun60i-a733-cubie-a7s.dts
+@@ -8,7 +8,7 @@
+ #include <dt-bindings/gpio/gpio.h>
+ 
+ / {
+-	model = "Radxa A7S";
++	model = "Radxa Cubie A7S";
+ 	compatible = "radxa,cubie-a7s", "allwinner,sun60i-a733";
+ 
+ 	aliases {

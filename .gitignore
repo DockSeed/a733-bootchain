@@ -1,0 +1,8 @@
+work/
+out/
+*.part
+*.img
+*.img.xz
+*.fex
+*.bin
+!patches/**

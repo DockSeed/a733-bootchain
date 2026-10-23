@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: the authors of this repository
+#
+# The build environment of a733-bootchain. ../build.sh builds it from this
+# directory and tags it with a hash of the directory's contents, so any change
+# here gives a new image and an unchanged tree reuses the old one.
+#
+# Pinned twice:
+#  - the base image by the digest of its multi-arch index (Debian trixie,
+#    amd64 and arm64 hosts each get their own platform image from the index),
+#  - every package by packages.lock: the snapshot.debian.org timestamp APT
+#    uses, and the exact version of every package the image ends up with.
+# install-packages.sh refuses to finish when the installed set differs from
+# the lock.
+FROM docker.io/library/debian:trixie@sha256:913f6706df59a68922d1dd08f78c2476560a8d367897200a6005b00e5f67c2d5
+
+COPY install-packages.sh packages.txt packages.lock /etc/bootchain-builder/
+
+RUN bash /etc/bootchain-builder/install-packages.sh install /etc/bootchain-builder \
+ && git config --system safe.directory '*' \
+ && git config --system advice.detachedHead false
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TZ=UTC \
+    DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /src

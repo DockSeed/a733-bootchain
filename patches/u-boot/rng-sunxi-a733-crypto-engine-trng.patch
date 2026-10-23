@@ -1,0 +1,257 @@
+From 0000000000000000000000000000000000000012 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Tue, 13 Oct 2026 00:00:00 +0000
+Subject: [PATCH] rng: add the TRNG of the Allwinner A733 crypto engine
+
+The TRNG is part of the engine's hash unit. A task on channel 2 with the
+A733's hash/RNG descriptor (40-bit addresses, lengths in bytes) asks for
+random data post-processed with SHA256, which the engine writes by DMA.
+Registers, descriptor, algorithm codes and the 300 MHz module clock are
+those of Linux's sun8i-ce driver for the A733, which passes its self-tests
+on the Cubie A7S. U-Boot polls CE_ISR instead of taking the interrupt and
+sets CE_CLK_REG itself, as the sunxi clock driver has no rates.
+
+Assisted-by: Claude
+---
+diff --git a/drivers/rng/Kconfig b/drivers/rng/Kconfig
+index 19b2b707677..cb9399e76f4 100644
+--- a/drivers/rng/Kconfig
++++ b/drivers/rng/Kconfig
+@@ -83,6 +83,14 @@ config RNG_IPROC200
+ 	help
+ 	  Enable random number generator for RPI4.
+ 
++config RNG_SUN60I_CE
++	bool "Allwinner A733 crypto engine TRNG"
++	depends on DM_RNG && MACH_SUN60I_A733
++	help
++	  Random numbers from the true random number generator in the crypto
++	  engine of the Allwinner A733, for the rng command and
++	  EFI_RNG_PROTOCOL.
++
+ config RNG_SMCCC_TRNG
+ 	bool "Arm SMCCC TRNG interface"
+ 	depends on DM_RNG && ARM_PSCI_FW
+diff --git a/drivers/rng/Makefile b/drivers/rng/Makefile
+index 30c58272d41..72236cc2b7e 100644
+--- a/drivers/rng/Makefile
++++ b/drivers/rng/Makefile
+@@ -12,6 +12,7 @@ obj-$(CONFIG_RNG_OPTEE) += optee_rng.o
+ obj-$(CONFIG_RNG_STM32) += stm32_rng.o
+ obj-$(CONFIG_RNG_RISCV_ZKR) += riscv_zkr_rng.o
+ obj-$(CONFIG_RNG_ROCKCHIP) += rockchip_rng.o
++obj-$(CONFIG_RNG_SUN60I_CE) += sun60i_ce_rng.o
+ obj-$(CONFIG_RNG_IPROC200) += iproc_rng200.o
+ obj-$(CONFIG_RNG_SMCCC_TRNG) += smccc_trng.o
+ obj-$(CONFIG_RNG_ARM_RNDR) += arm_rndr.o
+diff --git a/drivers/rng/sun60i_ce_rng.c b/drivers/rng/sun60i_ce_rng.c
+new file mode 100644
+index 00000000000..9941edc1fa2
+--- /dev/null
++++ b/drivers/rng/sun60i_ce_rng.c
+@@ -0,0 +1,205 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * Random numbers from the TRNG in the crypto engine of the Allwinner A733.
++ *
++ * The TRNG is part of the engine's hash unit: a task on channel 2 asks for
++ * random data, post-processed with SHA256, which the engine writes by DMA.
++ * Registers, task layout and clocks are those of Linux's sun8i-ce driver for
++ * the A733 (A733 manual, section 19.1); U-Boot polls instead of taking the
++ * interrupt.
++ */
++
++#include <clk.h>
++#include <cpu_func.h>
++#include <dm.h>
++#include <log.h>
++#include <memalign.h>
++#include <reset.h>
++#include <rng.h>
++#include <asm/io.h>
++#include <asm/arch/cpu.h>
++#include <linux/bitfield.h>
++#include <linux/bitops.h>
++#include <linux/iopoll.h>
++#include <linux/kernel.h>
++#include <linux/string.h>
++
++#define CE_TDQ			0x00	/* task descriptor address, bits 31:0 */
++#define CE_TDA1			0x04	/* task descriptor address, bits 39:32 */
++#define CE_ICR			0x08
++#define CE_ISR			0x0c
++#define CE_TLR			0x10
++#define CE_ESR			0x18
++
++/* Each channel feeds one unit; the TRNG belongs to the hash unit */
++#define CE_CHAN_HASH		2
++#define CE_TLR_LOAD(chan)	BIT(5 * (chan))
++#define CE_ISR_STATUS(isr, chan)	(((isr) >> (2 * (chan))) & 0x3)
++#define CE_ISR_CLEAR(chan)	(0x3 << (2 * (chan)))
++#define CE_ISR_DONE		1
++#define CE_ESR_CODE(esr, chan)	(((esr) >> (8 * (chan))) & 0xff)
++
++#define CE_HASH_CTL_CHAN	GENMASK(1, 0)
++#define CE_HASH_CTL_INT		BIT(16)
++#define CE_HASH_CMD_HASH	GENMASK(3, 0)
++#define CE_HASH_CMD_RBG		GENMASK(11, 8)
++#define CE_ALG_SHA256		3
++#define CE_ALG_TRNG		2
++
++/*
++ * CE_CLK_REG: the sunxi clock driver only gates, so the engine's module
++ * clock is set here, to PERI0_600M divided by 2, the 300 MHz Linux runs it at.
++ */
++#define CCU_CE_CLK		0x0ac0
++#define CCU_CE_CLK_SRC		GENMASK(26, 24)
++#define CCU_CE_CLK_SRC_PERI0_600M	2
++#define CCU_CE_CLK_M		GENMASK(4, 0)
++
++#define CE_RNG_CHUNK		256	/* bytes per task, a multiple of 32 */
++#define CE_TIMEOUT_US		100000
++
++/* Scatter-gather entry: 40-bit byte addresses, lowest byte first */
++struct ce_sg {
++	u8 src[5];
++	u8 dst[5];
++	u8 reserved[2];
++	__le32 src_len;
++	__le32 dst_len;
++} __packed;
++
++/* Task descriptor of the hash and RNG algorithms, 52 words */
++struct ce_task_hash {
++	__le32 t_ctl;
++	__le32 t_cmd;
++	u8 t_dlen[5];
++	u8 t_key[5];
++	u8 t_iv[5];
++	u8 total_len0;
++	struct ce_sg t_sg[8];
++	u8 next_sg[5];
++	u8 next[5];
++	u8 total_len1[14];
++} __packed;
++
++struct sun60i_ce_rng_priv {
++	void __iomem *base;
++};
++
++static void ce_put_le40(u8 *p, u64 v)
++{
++	int i;
++
++	for (i = 0; i < 5; i++)
++		p[i] = v >> (8 * i);
++}
++
++static int sun60i_ce_rng_task(struct sun60i_ce_rng_priv *priv,
++			      struct ce_task_hash *desc, u8 *buf)
++{
++	ulong d = (ulong)desc, b = (ulong)buf;
++	u32 isr, esr, status;
++	int ret;
++
++	memset(desc, 0, sizeof(*desc));
++	desc->t_ctl = cpu_to_le32(FIELD_PREP(CE_HASH_CTL_CHAN, CE_CHAN_HASH) |
++				  CE_HASH_CTL_INT);
++	desc->t_cmd = cpu_to_le32(FIELD_PREP(CE_HASH_CMD_HASH, CE_ALG_SHA256) |
++				  FIELD_PREP(CE_HASH_CMD_RBG, CE_ALG_TRNG));
++	ce_put_le40(desc->t_dlen, CE_RNG_CHUNK);
++	ce_put_le40(desc->t_sg[0].dst, b);
++	desc->t_sg[0].dst_len = cpu_to_le32(CE_RNG_CHUNK);
++
++	flush_dcache_range(d, d + ALIGN(sizeof(*desc), ARCH_DMA_MINALIGN));
++	invalidate_dcache_range(b, b + CE_RNG_CHUNK);
++
++	writel(CE_ISR_CLEAR(CE_CHAN_HASH), priv->base + CE_ISR);
++	setbits_le32(priv->base + CE_ICR, BIT(CE_CHAN_HASH));
++	writel(lower_32_bits(d), priv->base + CE_TDQ);
++	writel(upper_32_bits(d) & 0xff, priv->base + CE_TDA1);
++	writel(CE_TLR_LOAD(CE_CHAN_HASH), priv->base + CE_TLR);
++
++	ret = readl_poll_timeout(priv->base + CE_ISR, isr,
++				 CE_ISR_STATUS(isr, CE_CHAN_HASH),
++				 CE_TIMEOUT_US);
++	status = CE_ISR_STATUS(isr, CE_CHAN_HASH);
++	writel(CE_ISR_CLEAR(CE_CHAN_HASH), priv->base + CE_ISR);
++	esr = CE_ESR_CODE(readl(priv->base + CE_ESR), CE_CHAN_HASH);
++	if (ret || status != CE_ISR_DONE || esr) {
++		log_err("crypto engine TRNG: status %x error %02x%s\n", status,
++			esr, ret ? " (timeout)" : "");
++		return -EIO;
++	}
++
++	invalidate_dcache_range(b, b + CE_RNG_CHUNK);
++	return 0;
++}
++
++static int sun60i_ce_rng_read(struct udevice *dev, void *data, size_t len)
++{
++	struct sun60i_ce_rng_priv *priv = dev_get_priv(dev);
++	ALLOC_CACHE_ALIGN_BUFFER(struct ce_task_hash, desc, 1);
++	ALLOC_CACHE_ALIGN_BUFFER(u8, buf, CE_RNG_CHUNK);
++	size_t n;
++	int ret;
++
++	while (len) {
++		ret = sun60i_ce_rng_task(priv, desc, buf);
++		if (ret)
++			return ret;
++		n = min_t(size_t, len, CE_RNG_CHUNK);
++		memcpy(data, buf, n);
++		data += n;
++		len -= n;
++	}
++
++	return 0;
++}
++
++static int sun60i_ce_rng_probe(struct udevice *dev)
++{
++	struct sun60i_ce_rng_priv *priv = dev_get_priv(dev);
++	struct reset_ctl_bulk resets;
++	struct clk_bulk clks;
++	int ret;
++
++	priv->base = dev_read_addr_ptr(dev);
++	if (!priv->base)
++		return -EINVAL;
++
++	ret = reset_get_bulk(dev, &resets);
++	if (ret)
++		return ret;
++	ret = clk_get_bulk(dev, &clks);
++	if (ret)
++		return ret;
++
++	clrsetbits_le32((void *)SUNXI_CCM_BASE + CCU_CE_CLK,
++			CCU_CE_CLK_SRC | CCU_CE_CLK_M,
++			FIELD_PREP(CCU_CE_CLK_SRC, CCU_CE_CLK_SRC_PERI0_600M) |
++			FIELD_PREP(CCU_CE_CLK_M, 1));
++
++	/* Reset released before the clocks run, as Linux does */
++	ret = reset_deassert_bulk(&resets);
++	if (ret)
++		return ret;
++
++	return clk_enable_bulk(&clks);
++}
++
++static const struct dm_rng_ops sun60i_ce_rng_ops = {
++	.read = sun60i_ce_rng_read,
++};
++
++static const struct udevice_id sun60i_ce_rng_match[] = {
++	{ .compatible = "allwinner,sun60i-a733-crypto" },
++	{ }
++};
++
++U_BOOT_DRIVER(sun60i_ce_rng) = {
++	.name = "sun60i-ce-rng",
++	.id = UCLASS_RNG,
++	.of_match = sun60i_ce_rng_match,
++	.ops = &sun60i_ce_rng_ops,
++	.probe = sun60i_ce_rng_probe,
++	.priv_auto = sizeof(struct sun60i_ce_rng_priv),
++};

@@ -1,0 +1,29 @@
+# Debian packages of the builder image, one per line ('#' starts a comment).
+# The names are the Build-Depends of radxa-pkg/u-boot-dlan17's debian/control
+# that `make` uses (not the Debian packaging tools, not the armhf/armel cross
+# compilers, which nothing on this chain builds), plus the tools scripts/build.sh
+# calls. libssl-dev is not in that list but needed: U-Boot's host tools include
+# <openssl/engine.h>. U-Boot builds its own dtc.
+#
+# After a change run scripts/update-lock.sh; the image build refuses a package
+# list that does not match container/packages.lock.
+build-essential
+gcc-aarch64-linux-gnu
+make
+git
+curl
+ca-certificates
+xz-utils
+python3
+python3-dev
+python3-setuptools
+python3-pyelftools
+swig
+flex
+bison
+bc
+xxd
+dpkg-dev          # dpkg-parsechangelog: the package derives U-Boot's version from debian/changelog
+libssl-dev
+libgnutls28-dev
+libncurses-dev

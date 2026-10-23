@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000007 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Mon, 21 Sep 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: drop storage paths this SoC and board do not have
+
+Radxa's 649744f0f7 sets SPI-NOR, UFS, PCIe and NVMe options for the SoC, and
+89960fc94c adds UFS boot to the SPL. This board has no SATA controller and no
+UFS device, so this patch turns off the AHCI/SCSI and UFS options; AHCI also
+adds the boot target scsi0.
+
+  CONFIG_AHCI, CONFIG_SCSI, CONFIG_SCSI_AHCI
+      The A733 has no SATA controller. AHCI is what puts `scsi0` into
+      boot_targets (sunxi-common.h: BOOT_TARGET_DEVICES_SCSI is guarded by
+      CONFIG_AHCI); without it, scsi0 is not a boot target.
+
+  CONFIG_UFS, CONFIG_UFS_SUNXI, CONFIG_CMD_UFS, CONFIG_SPL_UFS_SUPPORT,
+  CONFIG_SPL_UFS_RAW_U_BOOT_SECTOR
+      The SoC has a UFS controller and the BROM can boot from it, but no A7S
+      board populates one. U-Boot is loaded from eMMC where present, otherwise
+      from the card, and from nothing else.
+
+What this deliberately does NOT touch:
+
+  * boot_targets order. The BROM tries SMHC0 (the card) before SMHC2 (eMMC)
+    in every BOOT_MODE variant, including the hardwired ones (A733 UM V1.00,
+    system-boot chapter), and `bootcmd_mmc_auto` then tries whichever medium
+    U-Boot itself came from first. So a bootable card always wins, above any
+    setting we could make, and MMC already precedes NVMe. mmc_auto
+    stays ahead of nvme0, so that a freshly flashed card outranks a system
+    left on the drive.
+
+  * CONFIG_SPL_DM and CONFIG_SPL_OF_CONTROL, which 89960fc94c turned on
+    with the SPL's UFS loader. The SPL loads U-Boot from the card through
+    that driver-model MMC path, and d45e03c7a9 fixed A733 SD boot on it.
+
+  * The SPI-NOR chip drivers, which are dropped separately
+    (sunxi-cubie-a7s-drop-spi-nor-drivers).
+
+Check: a boot chain built without these, booting unchanged from the card,
+with `printenv boot_targets` no longer listing scsi0 and the drive still
+found by `pci enum` + `nvme scan`.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index 8929d48fb64..a0c8019cff2 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -16,17 +16,13 @@ CONFIG_RADXA_UNIFIED_IMAGE=y
+ # CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
+ CONFIG_SPL_LOAD_FIT_ADDRESS=0x47a00000
+ CONFIG_SPL_SPI_SUNXI=y
+-CONFIG_SPL_UFS_SUPPORT=y
+-CONFIG_SPL_UFS_RAW_U_BOOT_SECTOR=0x14c
+ # CONFIG_SPL_DM_SERIAL is not set
+ CONFIG_BOOTDELAY=3
+-CONFIG_AHCI=y
+ CONFIG_FDT_FIXUP_PARTITIONS=y
+ CONFIG_SPL_RAM_DEVICE=y
+ CONFIG_CMD_DFU=y
+ CONFIG_CMD_I2C=y
+ CONFIG_CMD_MTD=y
+-CONFIG_CMD_UFS=y
+ CONFIG_CMD_SF_TEST=y
+ CONFIG_CMD_SPI=y
+ CONFIG_NET_RANDOM_ETHADDR=y
+@@ -71,11 +67,7 @@ CONFIG_PCIE_SUNXI=y
+ CONFIG_AW_CADENCE_COMBOPHY=y
+ CONFIG_REGULATOR_AXP=y
+ CONFIG_CMD_PCI=y
+-CONFIG_SCSI=y
+-CONFIG_SCSI_AHCI=y
+ CONFIG_SPI=y
+-CONFIG_UFS=y
+-CONFIG_UFS_SUNXI=y
+ CONFIG_WDT=y
+ CONFIG_WDT_SUNXI=y
+ CONFIG_WATCHDOG=y

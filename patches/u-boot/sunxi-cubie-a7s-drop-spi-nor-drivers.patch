@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000008 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Mon, 21 Sep 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: drop the SPI-NOR flash drivers
+
+The A7S family has no SPI flash. That makes the whole block dead text --
+nine chip drivers, the MTD glue and the sf test command, for a chip that is
+not on the board.
+
+The firmware path is unchanged by this: U-Boot is
+loaded from eMMC where present, otherwise from the card. The BROM would
+happily boot SPI NOR -- it sits in the try order between RAW NAND and SPI
+NAND -- but on a board with no such chip that branch can only ever fail.
+
+Removing the chip drivers is not enough on its own: CONFIG_SPI_FLASH and
+CONFIG_CMD_SF are not in this defconfig at all, they arrive from the defaults,
+and the built image still carried the whole sf sub-system with them. So both
+are explicitly unset here rather than left to be implied.
+
+The SPL's SPI-NOR loader goes with them (CONFIG_SPL_SPI_SUNXI, from
+bfc2ba0cf4 and b10e6114c4).
+
+Kept on purpose: CONFIG_SPI and CONFIG_CMD_SPI. The controller is not the
+flash. Something else on a header may want it, and nothing here says
+otherwise.
+
+Check: a boot chain built without these, booting unchanged from the card,
+and still finding the drive.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index a0c8019cff2..6458be406fd 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -15,16 +15,14 @@ CONFIG_MMC_SUNXI_SLOT_EXTRA=2
+ CONFIG_RADXA_UNIFIED_IMAGE=y
+ # CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
+ CONFIG_SPL_LOAD_FIT_ADDRESS=0x47a00000
+-CONFIG_SPL_SPI_SUNXI=y
+ # CONFIG_SPL_DM_SERIAL is not set
+ CONFIG_BOOTDELAY=3
+ CONFIG_FDT_FIXUP_PARTITIONS=y
+ CONFIG_SPL_RAM_DEVICE=y
+ CONFIG_CMD_DFU=y
+ CONFIG_CMD_I2C=y
+-CONFIG_CMD_MTD=y
+-CONFIG_CMD_SF_TEST=y
+ CONFIG_CMD_SPI=y
++# CONFIG_CMD_SF is not set
+ CONFIG_NET_RANDOM_ETHADDR=y
+ CONFIG_ADC=y
+ CONFIG_SUNXI_GPADC=y
+@@ -36,18 +34,6 @@ CONFIG_RADXA_ID_EEPROM=y
+ CONFIG_SYS_I2C_EEPROM_ADDR=0x50
+ CONFIG_SYS_I2C_EEPROM_ADDR_OVERFLOW=0x7
+ CONFIG_SUPPORT_EMMC_BOOT=y
+-CONFIG_MTD=y
+-CONFIG_MTD_BLOCK=y
+-CONFIG_SPI_FLASH_SOFT_RESET=y
+-CONFIG_SPI_FLASH_SOFT_RESET_ON_BOOT=y
+-CONFIG_SPI_FLASH_MACRONIX=y
+-CONFIG_SPI_FLASH_SPANSION=y
+-CONFIG_SPI_FLASH_STMICRO=y
+-CONFIG_SPI_FLASH_SST=y
+-CONFIG_SPI_FLASH_WINBOND=y
+-CONFIG_SPI_FLASH_XMC=y
+-CONFIG_SPI_FLASH_DATAFLASH=y
+-CONFIG_SPI_FLASH_MTD=y
+ CONFIG_DM_MDIO=y
+ CONFIG_DM_ETH_PHY=y
+ CONFIG_DWC_ETH_QOS=y
+@@ -68,6 +54,8 @@ CONFIG_AW_CADENCE_COMBOPHY=y
+ CONFIG_REGULATOR_AXP=y
+ CONFIG_CMD_PCI=y
+ CONFIG_SPI=y
++# CONFIG_SPI_FLASH is not set
++# CONFIG_DM_SPI_FLASH is not set
+ CONFIG_WDT=y
+ CONFIG_WDT_SUNXI=y
+ CONFIG_WATCHDOG=y

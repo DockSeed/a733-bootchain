@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000017 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Thu, 15 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: look for U-Boot where binman puts it
+
+On the A733, binman places the FIT 0x4a000 bytes after the start of the
+SPL: that is the min-size of the SPL entry in sunxi-u-boot.dtsi
+(cc66811f4f). The SPL looks for the FIT max(SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR,
+eGON length / 512) sectors after its own start
+(board_spl_mmc_get_uboot_raw_sector()), the eGON length being the SPL
+rounded up to 8 KiB. With the default 0x40 both meet only while the SPL
+is larger than 0x48000 bytes, and dropping the SPL's UFS and SPI-NOR
+loaders makes it smaller. 0x250 is 0x4a000 / 512, the value the comment
+in sunxi-u-boot.dtsi asks for, so the SPL finds the FIT whatever its own
+size.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index ee7cab41282..c145d3381c2 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -64,6 +64,7 @@ CONFIG_USB_OHCI_HCD=y
+ CONFIG_USB_MUSB_GADGET=y
+ CONFIG_USB_ETH_CDC=y
+ CONFIG_SPL_STACK_R_MALLOC_SIMPLE_LEN=0x140000
++CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR=0x250
+ CONFIG_PCI=y
+ CONFIG_NVME_PCI=y
+ CONFIG_PCIE_SUNXI=y

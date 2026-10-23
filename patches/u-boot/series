@@ -1,0 +1,27 @@
+# U-Boot patches, one file name per line, in apply order. overlay/apply.sh
+# applies them with `git apply` to the package's `src` submodule
+# (radxa/u-boot 9da4b3e82d641296f5b19d5e78eaad0d3cf56eec, pinned in
+# scripts/build.sh). Paths in the patches are relative to the U-Boot tree.
+#
+# This series applies to Radxa's U-Boot tree; a port to upstream U-Boot is the
+# long-term goal.
+#
+# Names are flat (no directory). One file name per line; '#' lines and empty
+# lines are ignored. Format: scripts/lib/series.sh.
+sunxi-a733-bl31-in-sram-without-scp.patch
+sunxi-cubie-a7s-u-boot-where-binman-puts-it.patch
+sunxi-cubie-a7s-watchdog-autostart.patch
+sunxi-cubie-a7s-bootcount-rtc-gpr.patch
+sunxi-cubie-a7s-reset-through-psci.patch
+sunxi-cubie-a7s-watchdog-on-wdt-cpus.patch
+sunxi-cubie-a7s-pcie-control-pins-on-bank-pd.patch
+sunxi-cubie-a7s-drop-dead-storage-paths.patch
+sunxi-cubie-a7s-drop-spi-nor-drivers.patch
+sunxi-cubie-a7s-board-name-as-in-linux.patch
+sunxi-a733-crypto-engine-clocks.patch
+sunxi-a733-crypto-engine-node.patch
+rng-sunxi-a733-crypto-engine-trng.patch
+sunxi-cubie-a7s-enable-the-rng.patch
+sunxi-a733-build-without-warnings.patch
+sunxi-a733-jtag-pins-to-io-disable.patch
+sunxi-cubie-a7s-no-arisc-start.patch

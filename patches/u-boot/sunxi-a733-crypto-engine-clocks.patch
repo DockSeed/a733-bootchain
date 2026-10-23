@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000010 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Tue, 13 Oct 2026 00:00:00 +0000
+Subject: [PATCH] clk: sunxi: a733: add the crypto engine gates and resets
+
+The crypto engine needs its bus, system, module and MBUS gates and its two
+resets: CE_BGR_REG 0x0ac4 (gates 0 and 1, resets 16 and 17), CE_CLK_REG
+0x0ac0 (gate 31) and the MBUS gate at 0x05e4 bit 2, as in Linux's A733
+clock driver. The module clock's source and divider are set by the engine's
+driver; this driver only gates.
+
+Assisted-by: Claude
+---
+diff --git a/drivers/clk/sunxi/clk_a733.c b/drivers/clk/sunxi/clk_a733.c
+index 09b4bc67449..fef8aa714ef 100644
+--- a/drivers/clk/sunxi/clk_a733.c
++++ b/drivers/clk/sunxi/clk_a733.c
+@@ -12,7 +12,11 @@
+ static struct ccu_clk_gate a733_gates[] = {
+ 	[CLK_PLL_PERIPH0_200M]	= GATE_DUMMY,
+ 	[CLK_APB1]			= GATE_DUMMY,
++	[CLK_MBUS_CE]		= GATE(0x05e4, BIT(2)),
+ 	[CLK_MBUS_GMAC0]	= GATE(0x05e4, BIT(11)),
++	[CLK_CE]		= GATE(0x0ac0, BIT(31)),
++	[CLK_BUS_CE]		= GATE(0x0ac4, BIT(0)),
++	[CLK_BUS_CE_SYS]	= GATE(0x0ac4, BIT(1)),
+ 	[CLK_BUS_MMC0]		= GATE(0x0d0c, BIT(0)),
+ 	[CLK_BUS_MMC1]		= GATE(0x0d1c, BIT(0)),
+ 	[CLK_BUS_MMC2]		= GATE(0x0d2c, BIT(0)),
+@@ -43,6 +47,8 @@ static struct ccu_clk_gate a733_gates[] = {
+ };
+ 
+ static struct ccu_reset a733_resets[] = {
++	[RST_BUS_CE]		= RESET(0x0ac4, BIT(16)),
++	[RST_BUS_SYS_CE]	= RESET(0x0ac4, BIT(17)),
+ 	[RST_BUS_MMC0]		= RESET(0x0d0c, BIT(16)),
+ 	[RST_BUS_MMC1]		= RESET(0x0d1c, BIT(16)),
+ 	[RST_BUS_MMC2]		= RESET(0x0d2c, BIT(16)),

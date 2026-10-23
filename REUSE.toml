@@ -1,0 +1,22 @@
+version = 1
+
+# Patch files carry no SPDX header; they take the licence of the project they
+# patch (the "as upstream" rule, see README).
+[[annotations]]
+path = "patches/tf-a/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "the patch authors named in each patch header"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+path = "patches/u-boot/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "the patch authors named in each patch header"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+# Everything without its own header: README, docs, pins, package list and lock, ignore file.
+[[annotations]]
+path = ["README.md", "docs/**", "pins/**", "container/packages.txt", "container/packages.lock", ".gitignore", "REUSE.toml"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "the authors of this repository"
+SPDX-License-Identifier = "GPL-2.0-only"
