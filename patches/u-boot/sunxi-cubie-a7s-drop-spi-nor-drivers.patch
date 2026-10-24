@@ -3,14 +3,13 @@ From: DockSeed <dockseed@proton.me>
 Date: Mon, 21 Sep 2026 00:00:00 +0000
 Subject: [PATCH] sunxi: cubie-a7s: drop the SPI-NOR flash drivers
 
-The A7S family has no SPI flash. That makes the whole block dead text --
-nine chip drivers, the MTD glue and the sf test command, for a chip that is
-not on the board.
+The A7S family has no SPI flash, so the nine chip drivers, the MTD glue and
+the sf test command are not used on this board.
 
 The firmware path is unchanged by this: U-Boot is
-loaded from eMMC where present, otherwise from the card. The BROM would
-happily boot SPI NOR -- it sits in the try order between RAW NAND and SPI
-NAND -- but on a board with no such chip that branch can only ever fail.
+loaded from eMMC where present, otherwise from the card. The BROM tries
+SPI NOR between RAW NAND and SPI NAND, but on a board with no such chip that
+branch can only fail.
 
 Removing the chip drivers is not enough on its own: CONFIG_SPI_FLASH and
 CONFIG_CMD_SF are not in this defconfig at all, they arrive from the defaults,
