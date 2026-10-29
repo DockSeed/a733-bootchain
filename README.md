@@ -26,7 +26,7 @@ front of the first partition.
 
 - TF-A is upstream master plus 17 patches (`patches/tf-a/`): the A733 platform
   on upstream's Allwinner code and generic GIC driver.
-- U-Boot is Radxa's tree (U-Boot v2026.07 plus 73 commits) with 17 patches
+- U-Boot is Radxa's tree (U-Boot v2026.07 plus 73 commits) with 18 patches
   (`patches/u-boot/`). No upstream U-Boot has the A733 yet.
 - No boot0, no boot package, no SCP firmware, no ARISC start. `boot_targets` is
   `fel mmc_auto nvme0 usb0 pxe dhcp`.
@@ -34,6 +34,14 @@ front of the first partition.
   needs a device tree that drives WDT_CPUS (or stops the watchdog); otherwise
   the board resets about 16 s after boot. Stopping the watchdog at the U-Boot
   prompt (`wdt dev watchdog@7021000`, `wdt stop`) reaches such a system.
+- Boot-disk safe mode: U-Boot counts boots in an RTC register (patch
+  `sunxi-cubie-a7s-bootcount-rtc-gpr`). After three boots that the system did
+  not mark good, it scans as usual and boots
+  `extlinux/extlinux-fallback.conf` from the disk the normal boot would use
+  (card, eMMC or NVMe), when that file is next to `extlinux/extlinux.conf`;
+  otherwise it boots normally (patch `sunxi-cubie-a7s-boot-disk-safe-mode`).
+  Clearing the counter (`bootcount reset` at the prompt, or a write of 0 to
+  `0x0709011C`) is the system's job.
 
 ## Requirements
 

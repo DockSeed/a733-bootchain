@@ -22,7 +22,7 @@ BROM -> U-Boot SPL (SRAM 0x47060, calls the vendor DRAM blob ddr.bin at 0x90000)
 | Part | Source |
 |---|---|
 | DRAM init | **vendor blob** `awbin/a733/ddr.bin` (232 409 bytes) from Radxa's package tree, built into the SPL unchanged; the SPL copies it to SRAM 0x90000 and calls it |
-| U-Boot SPL and U-Boot | Radxa's tree (`radxa/u-boot` `9da4b3e82d64`, U-Boot v2026.07 plus 73 commits for the A733) + 17 patches (`patches/u-boot/`) |
+| U-Boot SPL and U-Boot | Radxa's tree (`radxa/u-boot` `9da4b3e82d64`, U-Boot v2026.07 plus 73 commits for the A733) + 18 patches (`patches/u-boot/`) |
 | BL31 | upstream TF-A master `3d425f4f4598` + 17 patches (`patches/tf-a/`; provenance in [tf-a-series.md](tf-a-series.md)) |
 
 No boot0, no `boot_package.fex`, no SCP firmware, no packer: the U-Boot build

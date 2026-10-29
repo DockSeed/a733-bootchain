@@ -25,3 +25,4 @@ sunxi-cubie-a7s-enable-the-rng.patch
 sunxi-a733-build-without-warnings.patch
 sunxi-a733-jtag-pins-to-io-disable.patch
 sunxi-cubie-a7s-no-arisc-start.patch
+sunxi-cubie-a7s-boot-disk-safe-mode.patch

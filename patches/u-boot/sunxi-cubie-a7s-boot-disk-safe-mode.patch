@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000018 Mon Sep 17 00:00:00 2001
+From: DockSeed <dockseed@proton.me>
+Date: Thu, 29 Oct 2026 00:00:00 +0000
+Subject: [PATCH] sunxi: cubie-a7s: boot-disk safe mode
+
+Boot-disk safe mode: after bootlimit failed boots, boot the safe mode entry
+of the disk the normal boot would use, whatever the other disks carry.
+
+The altbootcmd of sunxi-cubie-a7s-bootcount-rtc-gpr scanned only mmc_auto
+for extlinux/extlinux-fallback.conf. A board that boots from NVMe had no
+safe mode: the fallback pass found nothing on the card or eMMC and the
+normal scan booted the failing NVMe system again. A card with only a stale
+extlinux-fallback.conf, and no extlinux.conf, won the fallback pass
+although the normal boot would skip it.
+
+altbootcmd now runs the normal scan (distro_bootcmd, same boot_targets,
+same order) with one change for this run: boot_extlinux, which
+scan_dev_for_extlinux runs on the first partition that has
+extlinux/extlinux.conf. On that partition it boots
+extlinux/extlinux-fallback.conf when the file is there, and
+extlinux/extlinux.conf otherwise or when the fallback entry fails to boot.
+So the safe mode comes from the disk of the normal boot, card, eMMC or NVMe;
+a disk without the fallback file boots normally. Network targets come only
+where the normal boot would reach them. If nothing boots, `env default -f`
+restores boot_extlinux.
+
+Nothing changes for images: the fallback file keeps its name and place
+next to extlinux.conf.
+
+U-Boot's own way, `fallback <label>` in extlinux.conf with
+`bootmeth set extlinux fallback 1` and `bootflow scan -lb`, needs
+CMD_BOOTMETH and BOOTSTD_FULL, and bootstd skips the mmc_auto target this
+board's boot_targets use; sysboot passes use_fallback=false.
+
+Assisted-by: Claude
+---
+diff --git a/configs/radxa-cubie-a7s_defconfig b/configs/radxa-cubie-a7s_defconfig
+index fe4cbaa3..8882a310 100644
+--- a/configs/radxa-cubie-a7s_defconfig
++++ b/configs/radxa-cubie-a7s_defconfig
+@@ -64,7 +64,7 @@ CONFIG_BOOTCOUNT_LIMIT=y
+ CONFIG_BOOTCOUNT_BOOTLIMIT=3
+ CONFIG_SYS_BOOTCOUNT_ADDR=0x0709011C
+ CONFIG_SYS_BOOTCOUNT_SINGLEWORD=y
+-CONFIG_BOOTCOUNT_ALTBOOTCMD="setenv boot_targets mmc_auto; setenv boot_syslinux_conf extlinux/extlinux-fallback.conf; run distro_bootcmd; env default -f boot_targets boot_syslinux_conf; run distro_bootcmd"
++CONFIG_BOOTCOUNT_ALTBOOTCMD="setenv boot_extlinux 'if test -e ${devtype} ${devnum}:${distro_bootpart} ${prefix}extlinux/extlinux-fallback.conf; then echo Safe mode: ${devtype} ${devnum}:${distro_bootpart} ${prefix}extlinux/extlinux-fallback.conf; sysboot ${devtype} ${devnum}:${distro_bootpart} any ${scriptaddr} ${prefix}extlinux/extlinux-fallback.conf; fi; sysboot ${devtype} ${devnum}:${distro_bootpart} any ${scriptaddr} ${prefix}${boot_syslinux_conf}'; run distro_bootcmd; env default -f boot_extlinux"
+ CONFIG_CMD_BOOTCOUNT=y
+ CONFIG_SYSRESET_PSCI=y
+ CONFIG_DM_RNG=y

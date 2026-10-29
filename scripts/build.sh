@@ -474,6 +474,17 @@ stage_build_bootchain() {
     && [ "${nvme_init#*nvme scan}" != "${nvme_init}" ] \
     || die "nvme0 does not boot through 'pci enum' + 'nvme scan' (nvme_boot=${nvme_boot}, nvme_init=${nvme_init}, boot_pci_enum=${pci_enum})"
   log "boot order: nvme0 after mmc_auto, no scsi0; nvme0 runs pci enum + nvme scan"
+  # Boot-disk safe mode (`sunxi-cubie-a7s-boot-disk-safe-mode`): altbootcmd
+  # runs the normal scan with a boot_extlinux that prefers
+  # extlinux-fallback.conf, so the safe mode comes from the disk of the normal
+  # boot. Compared whole: a changed quote or an added setenv of boot_targets or
+  # boot_syslinux_conf boots another disk or nothing.
+  local altboot altboot_want
+  altboot_want="setenv boot_extlinux 'if test -e \${devtype} \${devnum}:\${distro_bootpart} \${prefix}extlinux/extlinux-fallback.conf; then echo Safe mode: \${devtype} \${devnum}:\${distro_bootpart} \${prefix}extlinux/extlinux-fallback.conf; sysboot \${devtype} \${devnum}:\${distro_bootpart} any \${scriptaddr} \${prefix}extlinux/extlinux-fallback.conf; fi; sysboot \${devtype} \${devnum}:\${distro_bootpart} any \${scriptaddr} \${prefix}\${boot_syslinux_conf}'; run distro_bootcmd; env default -f boot_extlinux"
+  altboot="$(python3 "${spltool}" env "${img}" altbootcmd)" || die "no altbootcmd in U-Boot's default environment"
+  [ "${altboot}" = "${altboot_want}" ] \
+    || die "altbootcmd is not the boot-disk safe mode: ${altboot}"
+  log "safe mode: altbootcmd boots extlinux-fallback.conf from the disk of the normal boot"
   # The epoch has to be IN the file, not merely exported. Every U-Boot banner
   # (SPL and U-Boot), every TF-A `Built :` string and the FIT root `timestamp`
   # must read the pinned epoch, and each kind must be found at least once, so
