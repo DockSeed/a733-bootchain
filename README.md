@@ -168,3 +168,5 @@ The root `LICENSE` is the GPL-2.0 text, for the parts that are ours; the table
 above is what holds per file. The vendor blob is not in this tree and is not
 covered by any of these licences.
 Patches taken from other authors keep their authors' sign-offs.
+
+Unofficial; not affiliated with or authorized by Radxa or Allwinner.
