@@ -1,6 +1,6 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Jernej Skrabec <jernej.skrabec@gmail.com>
-Date: Thu, 16 Jan 2025 23:16:04 +0100
+From: DockSeed <dockseed@proton.me>
+Date: Sat, 3 Oct 2026 17:27:47 +0200
 Subject: [PATCH] feat(allwinner): CPU_ON and CPU_OFF for the new MPIDR format
 
 SoCs with DynamIQ cores (the A733) report MPIDR_EL1 in the DynamIQ
@@ -46,13 +46,15 @@ value that names no core does not alias one that does: PSCI CPU_ON and
 AFFINITY_INFO answer INVALID_PARAMETERS for it (measured on the A733
 before this: AFFINITY_INFO(0x101) answered the state of 0x100).
 
+Compared with the dlan17 TF-A fork commit, this is selected by
+SUNXI_NEW_MPIDR_FMT instead of replacing sunxi_cpu_ops.c for every SoC;
+takes the AArch64 reset bit from the platform's CLU0_CPUn_CTRL_REG; adds
+the MPIDR check and the PPU wait bounds; and drops the A523 parts.
+
+Co-developed-by: Jernej Skrabec <jernej.skrabec@gmail.com>
 Signed-off-by: Jernej Skrabec <jernej.skrabec@gmail.com>
-[DockSeed: selected by SUNXI_NEW_MPIDR_FMT instead of replacing
-sunxi_cpu_ops.c for every SoC; AArch64 reset bit from the platform's
-CLU0_CPUn_CTRL_REG; MPIDR check and PPU wait bounds added; A523 parts
-dropped]
-Assisted-by: LLM
 Link: https://github.com/dlan17/trusted-firmware-a/commit/b5de74a685fb73b784e45bbbd18dd9a0c528d8b2
+Assisted-by: Claude
 ---
  plat/allwinner/common/allwinner-common.mk     |  14 +-
  plat/allwinner/common/include/sunxi_private.h |   6 +-

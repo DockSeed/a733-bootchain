@@ -1,21 +1,21 @@
 <!-- SPDX-License-Identifier: GPL-2.0-only -->
 # TF-A series: provenance, decisions, open items
 
-The patch messages in `patches/tf-a/` are written for upstream review and carry
-no history. What each patch was made from, which choices it rests on and what is
-still open lives here.
+The patch messages in `patches/tf-a/` are written for upstream review. What
+each patch was made from, which choices it rests on and what is still open lives
+here.
 
 ## Sign-off chain
 
 Our own patches have `From: DockSeed <dockseed@proton.me>`, carry no
 `Signed-off-by` and end with `Assisted-by: Claude` (written by an AI coding
-agent, directed and checked by a human). A patch of another author keeps
-that author's `From:` and `Signed-off-by` as given; where code of that author
-sits in one of our patches, it is marked `Co-developed-by:` with that author's
-`Signed-off-by`. What we changed in a third-party patch is one line
-`[DockSeed: ...]` after the author's sign-off, and a `Link:` points to the fork
-commit it comes from. Authors outside this project: Jernej Skrabec and Yixun Lan
-(dlan17 TF-A fork).
+agent, directed and checked by a human). A patch of another author, taken
+unchanged, keeps that author's `From:` and `Signed-off-by`, with a `Link:` to
+the commit it comes from. Where we changed the code, the patch is ours:
+`From: DockSeed`, the author's work marked `Co-developed-by:` with that
+author's `Signed-off-by`, and the same `Link:`. What differs from the
+original is in the patch text or in the table below. Authors outside this
+project: Jernej Skrabec and Yixun Lan (dlan17 TF-A fork).
 
 ## Where each patch comes from
 

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Yixun Lan <dlan@gentoo.org>
-Date: Thu, 11 Sep 2025 22:31:48 +0000
-Subject: [PATCH] feat(allwinner): A733: add initial support
+From: DockSeed <dockseed@proton.me>
+Date: Sat, 3 Oct 2026 17:27:47 +0200
+Subject: [PATCH] feat(allwinner): A733: add the platform
 
 The Allwinner A733 (sun60iw2) has two Cortex-A76 and six Cortex-A55
 cores in one DynamIQ cluster, eight cores in all, and a GIC-600. Its
@@ -25,11 +25,15 @@ GIC-600 redistributors start at SUNXI_GICR_BASE.
 GICV3_IMPL_GIC600_MULTICHIP is not set: the A733 has one GIC-600, and
 without multichip data the option changes nothing.
 
+Compared with the dlan17 TF-A fork commit, this is reduced to the A733
+and corrected against the A733 UM V1.00, and the CPU files and GIC-600
+options sit in the platform's own platform.mk. The SPC port count is
+taken over from the fork.
+
+Co-developed-by: Yixun Lan <dlan@gentoo.org>
 Signed-off-by: Yixun Lan <dlan@gentoo.org>
-[DockSeed: reduced to the A733 and corrected against the A733 UM V1.00;
-CPU files and GIC-600 options in the platform's own platform.mk]
-Assisted-by: LLM
 Link: https://github.com/dlan17/trusted-firmware-a/commit/f4c0b0dba78a2d9916154c130979992caa3f3156
+Assisted-by: Claude
 ---
  docs/plat/allwinner.rst                       |  2 +
  .../common/include/sunxi_cpucfg_ncat3.h       | 32 +++++++++++++
@@ -212,7 +216,7 @@ index 000000000..481bef870
 +#endif /* SUNXI_MMAP_H */
 diff --git a/plat/allwinner/sun60i_a733/include/sunxi_spc.h b/plat/allwinner/sun60i_a733/include/sunxi_spc.h
 new file mode 100644
-index 000000000..93d51d93e
+index 000000000..2b28c75f1
 --- /dev/null
 +++ b/plat/allwinner/sun60i_a733/include/sunxi_spc.h
 @@ -0,0 +1,15 @@
@@ -223,7 +227,7 @@ index 000000000..93d51d93e
 +#ifndef SUNXI_SPC_H
 +#define SUNXI_SPC_H
 +
-+/* Get by REing stock ATF and checking initialization loop boundary */
++/* Value from the dlan17 TF-A fork; the A733 UM lists the SPC only in its memory map */
 +#define SUNXI_SPC_NUM_PORTS		14
 +
 +#define SUNXI_SPC_DECPORT_STA_REG(p)	(SUNXI_SPC_BASE + 0x0000 + 0x10 * (p))

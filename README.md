@@ -13,6 +13,8 @@ initialisation code is downloaded at build time from its public origin and
 checked against a sha256 committed here (see [The DRAM blob](#the-dram-blob)).
 The A733 is the SoC; the Cubie A7S is the board this is built and tested on.
 Other A733 boards will need their own defconfig and patches.
+a733-bootchain is unofficial and not affiliated with or authorized by Radxa or
+Allwinner.
 
 ## What you get
 
@@ -168,5 +170,3 @@ The root `LICENSE` is the GPL-2.0 text, for the parts that are ours; the table
 above is what holds per file. The vendor blob is not in this tree and is not
 covered by any of these licences.
 Patches taken from other authors keep their authors' sign-offs.
-
-Unofficial; not affiliated with or authorized by Radxa or Allwinner.

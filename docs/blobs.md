@@ -10,7 +10,7 @@ text came with the file.
 | What | Origin | Pin | Licence | Redistribute? |
 |---|---|---|---|---|
 | Package tree `u-boot-dlan17` (build glue) | github.com/radxa-pkg/u-boot-dlan17 | commit `b1cec0a90c79` (tag `2026.04-4`), `scripts/build.sh` | GPL-3.0-or-later (its `debian/copyright`) | yes |
-| **`awbin/a733/ddr.bin`**, the DRAM initialisation (AArch32), 232 409 bytes | the same package tree | sha256 `d89804f404f2eef6ef5b03d82a310ef0906c4db8ded760be221b131f5c813a05`, `pins/blobs.sha256` | closed vendor code, no licence text | **no** |
+| **`awbin/a733/ddr.bin`**, the DRAM initialisation (AArch32), 232 409 bytes | the same package tree | sha256 `d89804f404f2eef6ef5b03d82a310ef0906c4db8ded760be221b131f5c813a05`, `pins/blobs.sha256` | binary without licence text, which `radxa-pkg/u-boot-dlan17`'s `debian/copyright` lists under `Files: *` (GPL-3+) | **no** |
 | U-Boot source (`src` submodule) | github.com/radxa/u-boot, branch `u-boot-dlan17` | commit `9da4b3e82d64` (by hash only), `scripts/build.sh` | GPL-2.0-or-later | yes |
 | TF-A | git.trustedfirmware.org/TF-A/trusted-firmware-a, master | commit `3d425f4f4598`, `overlay/apply.sh` | BSD-3-Clause | yes |
 | Debian trixie base image | docker.io/library/debian | index digest in `container/Containerfile` | various, DFSG | yes |
